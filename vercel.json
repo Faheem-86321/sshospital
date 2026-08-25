@@ -6,12 +6,8 @@
   },
   "routes": [
     {
-      "src": "/(css|js|images|assets)/(.*)",
+      "src": "/(assets|images|common|vendor)/(.*)",
       "dest": "/$1/$2"
-    },
-    {
-      "src": "/(.*)\\.(jpg|jpeg|png|gif|svg|ico|css|js)$",
-      "dest": "/$1.$2"
     },
     {
       "src": "/(.*)",
