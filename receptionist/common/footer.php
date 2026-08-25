@@ -76,7 +76,79 @@ function capitalizeFirstLetter(string) {
     }
     ]
 } );
+$('#expenseTable').DataTable({
+    pageLength: 15,
+    dom: 'Bfrtip',
+    buttons: [
+        {
+            extend: 'copy',
+            footer: true,
+            title: 'Expense Report',
+            exportOptions: {
+                columns: "thead th:not(.noExport)"
+            }
+        },
+        {
+            extend: 'excelHtml5',
+            footer: true,
+            title: 'Expense Report',
+            exportOptions: {
+                columns: "thead th:not(.noExport)"
+            },
+            customizeData: function(data) {
 
+                let total = 0;
+
+                data.body.forEach(function(row) {
+                    total += parseFloat(row[3]) || 0;
+                });
+
+                data.body.push([
+                    '',
+                    '',
+                    'Total',
+                    total.toFixed(2),
+                    '',
+                    ''
+                ]);
+            }
+        },
+        {
+            extend: 'pdfHtml5',
+            footer: true,
+            title: 'Expense Report',
+            exportOptions: {
+                columns: "thead th:not(.noExport)"
+            },
+            customize: function(doc) {
+
+                var body = doc.content[1].table.body;
+                var total = 0;
+
+                for (var i = 1; i < body.length; i++) {
+                    total += parseFloat(body[i][3].text) || 0;
+                }
+
+                body.push([
+                    '',
+                    '',
+                    { text: 'Total', bold: true },
+                    { text: total.toFixed(2), bold: true },
+                    '',
+                    ''
+                ]);
+            }
+        },
+        {
+            extend: 'print',
+            footer: true,
+            title: 'Expense Report',
+            exportOptions: {
+                columns: "thead th:not(.noExport)"
+            }
+        }
+    ]
+});
   $('#myTable').DataTable({
     "bPaginate": false,
     "bFilter": false, 

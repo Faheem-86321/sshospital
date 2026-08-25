@@ -75,7 +75,7 @@
                             <?php 
                                 date_default_timezone_set("Asia/Karachi");
                                 if (isset($_GET['search_date'])) { ?>
-                                    <table id="example"  class="table table-centered table-striped table-bordered mb-0 toggle-circle" >
+                                    <table id="expenseTable"  class="table table-centered table-striped table-bordered mb-0 toggle-circle" >
                                 <thead>
                                     <tr>
                                             <th></th>
@@ -115,20 +115,17 @@
                                         }
                                     ?>
                                 </tbody>
-                                <tfoot style="background: lightgrey !important;">
-                                    <tr>
-                                        <td></td>
-                                        
-                                        <td></td>
-                                        <td class="text-center"><b>Total</b></td>
-                                        <td class="text-center"><b><?php echo $total_ex ?></b></td>
-                                        <td></td>
-                                        <td></td>
-                                    </tr>
-                                </tfoot>
+                                <tfoot>
+    <tr>
+        <td colspan="3"><b>Total</b></td>
+        <td><b><?= $total_ex ?></b></td>
+        <td></td>
+        <td></td>
+    </tr>
+</tfoot>
                             </table>
                                <?php  }else{ ?>
-                                <table id="example"  class="table table-centered table-striped table-bordered mb-0 toggle-circle" >
+                                <table id="expenseTable"  class="table table-centered table-striped table-bordered mb-0 toggle-circle" >
                                 <thead>
                                     <tr>
                                         <th></th>
@@ -144,7 +141,6 @@
                                         <th>Amount</th>
                                         <th>Date</th>
                                         <th>Added By</th>
-                      
                                     </tr>
                                 </thead>
                                 <tbody>
@@ -170,17 +166,14 @@
                                         }
                                     ?>
                                 </tbody>
-                                <tfoot style="background: lightgrey !important;">
-                                    <tr>
-                                        <td></td>
-
-                                        <td></td>
-                                        <td class="text-center"><b>Total</b></td>
-                                        <td class="text-center"><b><?php echo $total_ex ?></b></td>
-                                        <td></td>
-                                        <td></td>
-                                    </tr>
-                                </tfoot>
+                                <tfoot>
+    <tr>
+        <td colspan="3"><b>Total</b></td>
+        <td><b><?= $total_ex ?></b></td>
+        <td></td>
+        <td></td>
+    </tr>
+</tfoot>
                             </table>
                                 <?php }
                                 ?>
@@ -194,6 +187,61 @@
 </div> 
 </div>       
 <script type="text/javascript">
+new DataTable('#expenseTable', {
+    layout: {
+        topStart: {
+            buttons: [
+                {
+                    extend: 'copyHtml5'
+                },
+                {
+                    extend: 'excelHtml5',
+                    customizeData: function (data) {
+
+                        let total = 0;
+
+                        data.body.forEach(function (row) {
+                            total += parseFloat(row[3]) || 0;
+                        });
+
+                        data.body.push([
+                            '',
+                            '',
+                            'Total',
+                            total,
+                            '',
+                            ''
+                        ]);
+                    }
+                },
+                {
+                    extend: 'pdfHtml5',
+                    customize: function (doc) {
+
+                        var body = doc.content[1].table.body;
+                        var total = 0;
+
+                        for (var i = 1; i < body.length; i++) {
+                            total += parseFloat(body[i][3].text) || 0;
+                        }
+
+                        body.push([
+                            '',
+                            '',
+                            { text: 'Total', bold: true },
+                            { text: total.toString(), bold: true },
+                            '',
+                            ''
+                        ]);
+                    }
+                },
+                {
+                    extend: 'print'
+                }
+            ]
+        }
+    }
+});
     function update_info(idcus) {
         var idcus = idcus;
         $.ajax({

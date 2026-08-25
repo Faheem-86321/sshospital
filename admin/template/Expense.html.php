@@ -75,7 +75,7 @@
                             <?php 
                                 date_default_timezone_set("Asia/Karachi");
                                 if (isset($_GET['search_date'])) { ?>
-                                    <table id="example"  class="table table-centered table-striped table-bordered mb-0 toggle-circle" >
+                                    <table id="expenseTable"  class="table table-centered table-striped table-bordered mb-0 toggle-circle" >
                                 <thead>
                                     <tr>
                                             <th></th>
@@ -128,7 +128,7 @@
                                 </tfoot>
                             </table>
                                <?php  }else{ ?>
-                                <table id="example"  class="table table-centered table-striped table-bordered mb-0 toggle-circle" >
+                                <table id="expenseTable"  class="table table-centered table-striped table-bordered mb-0 toggle-circle" >
                                 <thead>
                                     <tr>
                                         <th></th>

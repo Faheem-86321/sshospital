@@ -74,3 +74,4 @@ RewriteRule ^files_card_dashboard$ index.php?page=Files_card_dashboard&page=File
 # ----------------------------------------------------
 RewriteRule ^atttendace$ index.php?page=Attendance&page=Attendance [QSA,NC,L]
 RewriteRule ^payroll$ index.php?page=Payroll$&page=Payroll[QSA,NC,L]
+RewriteRule ^comprehensive_reports$ index.php?page=Comprehensive_reports [QSA,NC,L]

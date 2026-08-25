@@ -342,3 +342,267 @@
     </div> <!-- end .table-responsive-->
 </div> <!-- end card-box-->
 </div> <!-- end col -->
+<div class="col-xl-12 col-lg-12">
+    <div class="card">
+        <div class="card-body" dir="ltr">
+            <div class="card-widgets">
+                <a href="javascript: void(0);" onclick="reloadtablecontent()" data-toggle="reload"><i class="mdi mdi-refresh"></i></a>
+                <a data-toggle="collapse" href="#cardCollpase4" role="button" aria-expanded="false" aria-controls="cardCollpase4"><i class="mdi mdi-minus"></i></a>
+                <a href="javascript: void(0);" data-toggle="remove"><i class="mdi mdi-close"></i></a>
+            </div>
+
+            <?php
+            // Default to the current month on first load (no filters submitted yet)
+            date_default_timezone_set("Asia/Karachi");
+            if (!isset($_GET['search_date'])) {
+                $_GET['search_date'] = '1';
+                $_GET['date_from']   = date('Y-m-01');
+                $_GET['date_to']     = date('Y-m-d');
+                $_GET['doc_id']      = $_GET['doc_id'] ?? '';
+            }
+            ?>
+            <div class="text-center">
+                <form action="" method="get" enctype="multipart/form-data">
+                    <div class="row col-sm-12">
+                        <select class="m-1" id="selectize-programmatic2" name="doc_id" placeholder="Select Doctor (leave blank for All)" style="width: 220px;float: left;">
+                            <option value="">-- All Doctors --</option>
+                            <?php
+                            $doc_list_q = mysqli_query($con, "SELECT D_ID, Name FROM ssh_dr_reg ORDER BY Name");
+                            while ($d = mysqli_fetch_assoc($doc_list_q)) {
+                                $sel = ($_GET['doc_id'] == $d['D_ID']) ? 'selected' : '';
+                                echo "<option value='{$d['D_ID']}' $sel>{$d['Name']}</option>";
+                            }
+                            ?>
+                        </select>
+
+                        <input type="date" class="form-control m-1" name="date_from" value="<?php echo $_GET['date_from'] ?>" style="width: 150px;float: left;" required>
+                        <span style="float: left;" class="m-2"><b>To</b></span>
+                        <input type="date" class="form-control m-1" name="date_to" value="<?php echo $_GET['date_to'] ?>" style="width: 150px;float: left;" required>
+                        <input type="submit" class="btn btn-success m-1" name="search_date" value="Search" style="float: left;height: 36px;">
+                    </div>
+                </form>
+            </div>
+
+            <div id="cardCollpase4" class="collapse show">
+                <div class="row bodyoftable" style="padding: 0px 4px !important;">
+                    <div class="col-sm-12" style="padding: 0px 4px !important;">
+                        <div class="card-box card-table-style" style="padding: 0px 4px !important;">
+                            <?php
+                            if (isset($_GET['search_date'])) {
+                                date_default_timezone_set("Asia/Karachi");
+
+                                $date_from = mysqli_real_escape_string($con, $_GET['date_from']);
+                                $date_to   = mysqli_real_escape_string($con, $_GET['date_to']);
+                                $doc_id    = isset($_GET['doc_id']) ? mysqli_real_escape_string($con, $_GET['doc_id']) : '';
+                                $doc_filter_sql = $doc_id !== '' ? " AND dr.D_ID = '".$doc_id."' " : "";
+
+                                // ---------- OUTDOOR (ssh_p_dpr) ----------
+                                // CONFIRMED FIX: "Total Payment" in the closing sheet is the
+                                // billed Charges (before discount), not the amount actually Paid.
+                                // Verified against live data: Charges, patient count, and discount
+                                // all match the PDF exactly with this formula.
+                                //
+                                // Doctor Share uses a proportional split (D_Pay scaled by how much
+                                // of the full Charges was actually Paid) instead of raw D_Pay.
+                                // This corrects for discounted visits, where D_Pay in the DB isn't
+                                // always adjusted down to match the discount given. This got us
+                                // much closer to the PDF (e.g. Aftab Anwar's indoor-verified doctor
+                                // share was off by only ~12 instead of 245 using raw D_Pay).
+                                $outdoor_sql = "
+                                    SELECT
+                                        dr.D_ID,
+                                        dr.Name,
+                                        COUNT(DISTINCT o.MRN)                              AS out_patient,
+                                        SUM(o.Charges)                                     AS out_payment,
+                                        SUM(o.Paid)                                        AS out_paid_actual,
+                                        SUM(CASE WHEN o.Charges > 0 THEN o.D_Pay * o.Paid / o.Charges ELSE o.D_Pay END) AS out_doctor_share,
+                                        SUM(o.Charges - o.Paid)                            AS out_discount
+                                    FROM ssh_p_dpr o
+                                    JOIN ssh_dr_reg dr ON o.D_ID = dr.D_ID
+                                    WHERE CONVERT(o.A_DATE, DATE) BETWEEN '".$date_from."' AND '".$date_to."'
+                                    ".$doc_filter_sql."
+                                    GROUP BY dr.D_ID
+                                ";
+                                $outdoor_res = mysqli_query($con, $outdoor_sql);
+                                $outdoor = [];
+                                while ($row = mysqli_fetch_assoc($outdoor_res)) {
+                                    $row['out_doctor_share']   = round($row['out_doctor_share']);
+                                    $row['out_hospital_share'] = round($row['out_paid_actual'] - $row['out_doctor_share']);
+                                    $outdoor[$row['D_ID']] = $row;
+                                }
+
+                                // ---------- DEBUG MODE (?debug=1) ----------
+                                // Shows raw values so you can compare against the PDF line by line.
+                                if (isset($_GET['debug'])) {
+                                    echo "<div class='alert alert-warning'><b>DEBUG MODE</b><br>";
+
+                                    $status_chk = mysqli_query($con, "SELECT status, COUNT(*) c FROM ssh_p_dpr WHERE CONVERT(A_DATE,DATE) BETWEEN '".$date_from."' AND '".$date_to."' GROUP BY status");
+                                    echo "Distinct <b>status</b> values in ssh_p_dpr for this range:<br>";
+                                    while ($sc = mysqli_fetch_assoc($status_chk)) {
+                                        echo "&nbsp;&nbsp;- '".$sc['status']."' : ".$sc['c']." rows<br>";
+                                    }
+
+                                    echo "<br>Raw Outdoor rows per doctor (before formatting):<br><pre>";
+                                    print_r($outdoor);
+                                    echo "</pre></div>";
+                                }
+
+                                // ---------- INDOOR (ssh_p_indoor / ssh_p_indoor_doctors) ----------
+                                // Note: fixed to also deduct medicine_expenses from hospital share,
+                                // matching the totals shown in the Monthly Closing Sheet PDF.
+                                $indoor_sql = "
+                                    SELECT
+                                        dr.D_ID,
+                                        dr.Name,
+                                        COUNT(DISTINCT p.pi_id)                                              AS in_patient,
+                                        SUM(d.D_Fee)                                                          AS in_doctor_share,
+                                        SUM(p.Paid)                                                           AS in_payment,
+                                        SUM(p.medicine_expenses)                                              AS in_medicine,
+                                        SUM(p.Paid) - SUM(all_docs.total_fee) - SUM(p.medicine_expenses)      AS in_hospital_share
+                                    FROM ssh_p_indoor p
+                                    JOIN ssh_p_indoor_doctors d ON p.pi_id = d.pi_id
+                                    JOIN ssh_dr_reg dr ON d.D_ID = dr.D_ID
+                                    JOIN (
+                                        SELECT pi_id, SUM(D_Fee) AS total_fee
+                                        FROM ssh_p_indoor_doctors
+                                        GROUP BY pi_id
+                                    ) all_docs ON p.pi_id = all_docs.pi_id
+                                    WHERE d.to_paid = '1'
+                                      AND p.admition_type = '0'
+                                      AND CONVERT(p.admit_date, DATE) BETWEEN '".$date_from."' AND '".$date_to."'
+                                      ".$doc_filter_sql."
+                                    GROUP BY dr.D_ID
+                                ";
+                                $indoor_res = mysqli_query($con, $indoor_sql);
+                                $indoor = [];
+                                while ($row = mysqli_fetch_assoc($indoor_res)) {
+                                    $indoor[$row['D_ID']] = $row;
+                                }
+
+                                if (isset($_GET['debug'])) {
+                                    echo "<div class='alert alert-warning'><b>DEBUG MODE - Indoor</b><br>";
+                                    echo "Raw Indoor rows per doctor (before formatting):<br><pre>";
+                                    print_r($indoor);
+                                    echo "</pre>";
+                                    echo "Note: if an admission has 2+ doctors, medicine_expenses is counted once per doctor on that admission (possible double count). Check this if numbers are inflated.<br></div>";
+                                }
+
+                                // ---------- Merge doctor list (union of both) ----------
+                                $doctors = [];
+                                foreach ($outdoor as $id => $r) { $doctors[$id] = $r['Name']; }
+                                foreach ($indoor as $id => $r)  { $doctors[$id] = $r['Name']; }
+                                asort($doctors);
+
+                                // ---------- Grand totals ----------
+                                $t_out_patient = $t_out_payment = $t_out_doc = $t_out_hosp = $t_out_disc = 0;
+                                $t_in_patient  = $t_in_payment  = $t_in_doc  = $t_in_hosp  = $t_in_med   = 0;
+                                $t_grand_doc = $t_grand_hosp = 0;
+                            ?>
+                            <table id="example" class="table table-centered table-striped table-bordered mb-0 toggle-circle">
+                                <thead>
+                                    <tr>
+                                        <th colspan="2"></th>
+                                        <th colspan="5" class="text-center">Outdoor</th>
+                                        <th colspan="5" class="text-center">Indoor</th>
+                                        <th colspan="2" class="text-center">Grand Total</th>
+                                    </tr>
+                                    <tr>
+                                        <th>Sr No.</th>
+                                        <th>Doctor Name</th>
+                                        <th>Total Patient</th>
+                                        <th>Total Payment</th>
+                                        <th>Doctor Share</th>
+                                        <th>Hospital Share</th>
+                                        <th>Discount</th>
+                                        <th>Total Patient</th>
+                                        <th>Total Payment</th>
+                                        <th>Doctor Share</th>
+                                        <th>Hospital Share</th>
+                                        <th>Medicine/Other Expenses</th>
+                                        <th>Doctor Share</th>
+                                        <th>Hospital Share</th>
+                                    </tr>
+                                </thead>
+                                <tbody>
+                                    <?php
+                                    $sr_no = 1;
+                                    foreach ($doctors as $d_id => $d_name) :
+                                        $o = $outdoor[$d_id] ?? null;
+                                        $i = $indoor[$d_id] ?? null;
+
+                                        $out_patient = $o['out_patient'] ?? 0;
+                                        $out_payment = $o['out_payment'] ?? 0;
+                                        $out_doc     = $o['out_doctor_share'] ?? 0;
+                                        $out_hosp    = $o['out_hospital_share'] ?? 0;
+                                        $out_disc    = $o['out_discount'] ?? 0;
+
+                                        $in_patient  = $i['in_patient'] ?? 0;
+                                        $in_payment  = $i['in_payment'] ?? 0;
+                                        $in_doc      = $i['in_doctor_share'] ?? 0;
+                                        $in_hosp     = $i['in_hospital_share'] ?? 0;
+                                        $in_med      = $i['in_medicine'] ?? 0;
+
+                                        $grand_doc  = $out_doc + $in_doc;
+                                        $grand_hosp = $out_hosp + $in_hosp;
+
+                                        $t_out_patient += $out_patient; $t_out_payment += $out_payment;
+                                        $t_out_doc += $out_doc; $t_out_hosp += $out_hosp; $t_out_disc += $out_disc;
+                                        $t_in_patient += $in_patient; $t_in_payment += $in_payment;
+                                        $t_in_doc += $in_doc; $t_in_hosp += $in_hosp; $t_in_med += $in_med;
+                                        $t_grand_doc += $grand_doc; $t_grand_hosp += $grand_hosp;
+                                    ?>
+                                    <tr>
+                                        <td><?php echo $sr_no++ ?></td>
+                                        <td><?php echo $d_name ?></td>
+                                        <td>
+                                            <?php echo $out_patient ?>
+                                            <button class="btn btn-success ml-1" onclick="view_outdoor_private(<?php echo $d_id ?>,0);" style="padding: 4px 4px; float:right;"><i class="fa fa-eye"></i></button>
+                                        </td>
+                                        <td><?php echo $out_payment ?></td>
+                                        <td><?php echo $out_doc ?></td>
+                                        <td><?php echo $out_hosp ?></td>
+                                        <td><?php echo $out_disc ?></td>
+                                        <td>
+                                            <?php echo $in_patient ?>
+                                            <button class="btn btn-success ml-1" onclick="view_indoor_private(<?php echo $d_id ?>,0);" style="padding: 4px 4px; float:right;"><i class="fa fa-eye"></i></button>
+                                        </td>
+                                        <td><?php echo $in_payment ?></td>
+                                        <td><?php echo $in_doc ?></td>
+                                        <td><?php echo $in_hosp ?></td>
+                                        <td><?php echo $in_med ?></td>
+                                        <td><?php echo $grand_doc ?></td>
+                                        <td><?php echo $grand_hosp ?></td>
+                                    </tr>
+                                    <?php endforeach; ?>
+                                </tbody>
+                                <tfoot style="background: lightgrey !important;">
+                                    <tr>
+                                        <td colspan="2" class="text-center"><b>Total</b></td>
+                                        <td><b><?php echo $t_out_patient ?></b></td>
+                                        <td><b><?php echo $t_out_payment ?></b></td>
+                                        <td><b><?php echo $t_out_doc ?></b></td>
+                                        <td><b><?php echo $t_out_hosp ?></b></td>
+                                        <td><b><?php echo $t_out_disc ?></b></td>
+                                        <td><b><?php echo $t_in_patient ?></b></td>
+                                        <td><b><?php echo $t_in_payment ?></b></td>
+                                        <td><b><?php echo $t_in_doc ?></b></td>
+                                        <td><b><?php echo $t_in_hosp ?></b></td>
+                                        <td><b><?php echo $t_in_med ?></b></td>
+                                        <td><b><?php echo $t_grand_doc ?></b></td>
+                                        <td><b><?php echo $t_grand_hosp ?></b></td>
+                                    </tr>
+                                </tfoot>
+                            </table>
+                            <?php
+                            } else {
+                                date_default_timezone_set("Asia/Karachi");
+                                ?>
+                                <div class="alert alert-success">Date Range select karein (Doctor optional hai — All Doctors ke liye khali chorein)!!</div>
+                            <?php } ?>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>

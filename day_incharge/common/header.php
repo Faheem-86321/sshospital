@@ -243,6 +243,10 @@
                             <li>
                                 <a href="private_dialysis" class="text-white"><i class="fa fa-arrow-right mr-1"> </i> Private Dialysis</a>
                             </li>
+                            </li>
+                               <li>
+                                <a href="expense" class="text-white"><i class="fa fa-arrow-right mr-1"> </i> Expense</a>
+                            </li>
                             
                             
                         </ul>

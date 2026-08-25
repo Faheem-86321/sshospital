@@ -1,4 +1,10 @@
 
+<style>
+@media print {
+  thead { display: table-header-group !important; }
+  tfoot { display: table-footer-group !important; }
+}
+</style>
 <button id="updateinfobutton" hidden class="btn " data-toggle="modal" data-target="#updateinfo" style="background: #21325E; color: white;" ><i class="mdi mdi-plus-circle mr-2"></i> Update Expense </button>
 <div class="modal fade" id="updateinfo" tabindex="-1" role="dialog" aria-hidden="true">
     <div class="modal-dialog modal-dialog-centered ">
@@ -75,110 +81,122 @@
                             <?php 
                                 date_default_timezone_set("Asia/Karachi");
                                 if (isset($_GET['search_date'])) { ?>
-                                    <table id="example"  class="table table-centered table-striped table-bordered mb-0 toggle-circle" >
-                                <thead>
-                                    <tr>
-                                            <th></th>
-                                            <th colspan="3"><?php echo $_GET['date_from']." To ".$_GET['date_to'] ?></th>
-                                            <th></th>
-                                        </tr>
-                                    <tr>
-                                        <th>Sr No.</th>
-                                        <th  class="noExport">Option</th>
-                                        <th>Title</th>
-                                        <th>Amount</th>
-                                        <th>Date</th>
-                      
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <?php
-                                    $sr_no = 1;
-                                    $total_ex = 0;
-                                    $fetch_data = "SELECT * FROM `ssh_expenses` where date >= '".$_GET['date_from']."' AND date <= '".$_GET['date_to']."' AND services = '0'  AND user_id = '".$_SESSION['user_id']."'  ";
-                                    $fetch_data_ex = mysqli_query($con,$fetch_data);
-                                    foreach($fetch_data_ex as $row){ ?>
-                                        <tr id="<?php echo $row['Voucher'] ?>">
-                                            <?php echo "<td>".$sr_no."</td>";?>
-                                            <td>
+                                  <table id="expenseTable" class="table table-centered table-striped table-bordered mb-0 toggle-circle">
+    <thead>
+        <tr>
+            <th></th>
+            <th colspan="3"><?php echo $_GET['date_from']." To ".$_GET['date_to'] ?></th>
+            <th></th>
+        </tr>
+        <tr>
+            <th>Sr No.</th>
+            <th class="noExport">Option</th>
+            <th>Title</th>
+            <th>Amount</th>
+            <th>Date</th>
+        </tr>
+    </thead>
 
-                                                <a class='btn btn-primary ' onclick="update_info(<?php echo $row['Voucher']; ?>);" style='padding: 6px 6px;margin: 2px; border-radius: 3px;color:white'><i class='fa fa-edit' aria-hidden='true'></i></a>
-                                                 
+    <tbody>
+        <?php
+        $sr_no = 1;
+        $total_ex = 0;
+        $fetch_data = "SELECT * FROM `ssh_expenses` 
+        WHERE date >= '".$_GET['date_from']."' 
+        AND date <= '".$_GET['date_to']."' 
+        AND services = '0'  
+        AND user_id = '".$_SESSION['user_id']."'";
 
-                                            </td>
-                                            <?php echo "<td>".$row['Title']."</td><td>".$row['Amount']."</td><td>".$row['Date']."</td>"; ?>
-                                        </tr>
-                                        <?php 
-                                        $total_ex += $row['Amount'];
-                                        $sr_no++;
-                                        }
-                                    ?>
-                                </tbody>
-                                <tfoot style="background: lightgrey !important;">
-                                    <tr>
-                                        <td></td>
-                                        
-                                        <td></td>
-                                        <td class="text-center"><b>Total</b></td>
-                                        <td class="text-center"><b><?php echo $total_ex ?></b></td>
-                                        
-                                        <td></td>
-                                    </tr>
-                                </tfoot>
+        $fetch_data_ex = mysqli_query($con,$fetch_data);
+        foreach($fetch_data_ex as $row){ ?>
+            <tr id="<?php echo $row['Voucher'] ?>">
+                <td><?php echo $sr_no; ?></td>
+                <td>
+                    <a class='btn btn-primary' onclick="update_info(<?php echo $row['Voucher']; ?>);">
+                        <i class='fa fa-edit'></i>
+                    </a>
+                </td>
+                <td><?php echo $row['Title']; ?></td>
+                <td><?php echo $row['Amount']; ?></td>
+                <td><?php echo $row['Date']; ?></td>
+            </tr>
+        <?php 
+        $total_ex += $row['Amount'];
+        $sr_no++;
+        } ?>
+    </tbody>
+
+    <!-- ✅ IMPORTANT: Footer must be here -->
+    <tfoot style="background: lightgrey;">
+        <tr>
+            <td></td>
+            <td></td>
+            <td class="text-center"><b>Total</b></td>
+            <td class="text-center"><b><?php echo $total_ex ?></b></td>
+            <td></td>
+        </tr>
+    </tfoot>
+</table>
                             </table>
                                <?php  }else{ ?>
-                                <table id="example"  class="table table-centered table-striped table-bordered mb-0 toggle-circle" >
-                                <thead>
-                                    <tr>
-                                        <th></th>
-                                        <th></th>
-                                        <th ><?php echo date('Y-m-d')."<br>".date('l') ?></th>
-                                        <th></th>
-                                        <th></th>
-                                    </tr>
-                                    <tr>
-                                        <th>Sr No.</th>
-                                        <th  class="noExport">Option</th>
-                                        <th>Title</th>
-                                        <th>Amount</th>
-                                        <th>Date</th>
-                      
-                                    </tr>
-                                </thead>
-                                <tbody>
-                                    <?php
-                                    $total_ex = 0;
-                                    $sr_no = 1;
-                                    $fetch_data = "SELECT * FROM `ssh_expenses` where date = '".date('Y-m-d')."' AND services = '0' AND user_id = '".$_SESSION['user_id']."'  ";
-                                    $fetch_data_ex = mysqli_query($con,$fetch_data);
-                                    foreach($fetch_data_ex as $row){ ?>
-                                        <tr id="<?php echo $row['Voucher'] ?>">
-                                            <?php echo "<td>".$sr_no."</td>";?>
-                                            <td>
+                               <table id="expenseTable" class="table table-centered table-striped table-bordered mb-0 toggle-circle">
+    <thead>
+        <tr>
+            <th></th>
+            <th></th>
+            <th><?php echo date('Y-m-d')."<br>".date('l') ?></th>
+            <th></th>
+            <th></th>
+        </tr>
+        <tr>
+            <th>Sr No.</th>
+            <th class="noExport">Option</th>
+            <th>Title</th>
+            <th>Amount</th>
+            <th>Date</th>
+        </tr>
+    </thead>
 
-                                                <a class='btn btn-primary ' onclick="update_info(<?php echo $row['Voucher']; ?>);" style='padding: 6px 6px;margin: 2px; border-radius: 3px;color:white'><i class='fa fa-edit' aria-hidden='true'></i></a>
+    <tbody>
+        <?php
+        $sr_no = 1;
+        $total_ex = 0;
 
-                                            </td>
-                                            <?php echo "<td>".$row['Title']."</td><td>".$row['Amount']."</td><td>".$row['Date']."</td>"; ?>
-                                        </tr>
-                                        <?php 
-                                        $total_ex += $row['Amount'];
-                                        $sr_no++;
-                                        }
-                                    ?>
-                                </tbody>
-                                <tfoot style="background: lightgrey !important;">
-                                    <tr>
-                                        <td></td>
+        $fetch_data = "SELECT * FROM `ssh_expenses` 
+        WHERE date = '".date('Y-m-d')."' 
+        AND services = '0' 
+        AND user_id = '".$_SESSION['user_id']."'";
 
-                                        <td></td>
-                                        <td class="text-center"><b>Total</b></td>
-                                        <td class="text-center"><b><?php echo $total_ex ?></b></td>
-                                        
-                                        <td></td>
-                                    </tr>
-                                </tfoot>
-                            </table>
+        $fetch_data_ex = mysqli_query($con,$fetch_data);
+        foreach($fetch_data_ex as $row){ ?>
+            <tr id="<?php echo $row['Voucher'] ?>">
+                <td><?php echo $sr_no; ?></td>
+                <td>
+                    <a class='btn btn-primary' onclick="update_info(<?php echo $row['Voucher']; ?>);">
+                        <i class='fa fa-edit'></i>
+                    </a>
+                </td>
+                <td><?php echo $row['Title']; ?></td>
+                <td><?php echo $row['Amount']; ?></td>
+                <td><?php echo $row['Date']; ?></td>
+            </tr>
+        <?php 
+        $total_ex += $row['Amount'];
+        $sr_no++;
+        } ?>
+    </tbody>
+
+    <!-- ✅ IMPORTANT -->
+    <tfoot style="background: lightgrey;">
+        <tr>
+            <td></td>
+            <td></td>
+            <td class="text-center"><b>Total</b></td>
+            <td class="text-center"><b><?php echo $total_ex ?></b></td>
+            <td></td>
+        </tr>
+    </tfoot>
+</table>
                                 <?php }
                                 ?>
                             
@@ -190,7 +208,36 @@
     </div>
 </div> 
 </div>       
+
 <script type="text/javascript">
+    
+    $('#expenseTable').DataTable({
+    dom: 'Bfrtip',
+    buttons: [
+        {
+            extend: 'excelHtml5',
+            footer: true,
+            exportOptions: {
+                columns: ':not(.noExport)'
+            }
+        },
+        {
+            extend: 'print',
+            footer: true,
+            exportOptions: {
+                columns: ':not(.noExport)'
+            }
+        },
+        {
+            extend: 'pdfHtml5',
+            footer: true,
+            exportOptions: {
+                columns: ':not(.noExport)'
+            }
+        }
+    ]
+});
+
     function update_info(idcus) {
         var idcus = idcus;
         $.ajax({
