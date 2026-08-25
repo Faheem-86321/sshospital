@@ -3,7 +3,7 @@ if (session_status() !== PHP_SESSION_ACTIVE) {
     session_start();
 }
 
-$con = mysqli_connect('localhost', 'u719432153_Faheem', '$Bf1Yl=QAYZb', 'u719432153_Faheem');
+$con = mysqli_connect('srv1934.hstgr.io', 'u719432153_Faheem', '$Bf1Yl=QAYZb', 'u719432153_Faheem');
 
 if (!$con) {
     die('Connection Not Established');
