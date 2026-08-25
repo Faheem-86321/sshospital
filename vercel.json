@@ -6,8 +6,11 @@
   },
   "routes": [
     {
+      "handle": "filesystem"
+    },
+    {
       "src": "/(assets|images)/(.*)",
-      "dest": "/api/$1/$2"
+      "dest": "/$1/$2"
     },
     {
       "src": "/(.*)",
