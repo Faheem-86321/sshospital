@@ -1,8 +1,6 @@
 <?php
+// api/index.php
 
-header('Content-Type: application/json');
-
-echo json_encode([
-    'success' => true,
-    'message' => 'PHP API is working!'
-]);
+echo "<h1>Hello World! My PHP project is running on Vercel.</h1>";
+echo "<p>Current time: " . date('Y-m-d H:i:s') . "</p>";
+?>
